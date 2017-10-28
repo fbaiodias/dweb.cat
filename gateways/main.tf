@@ -1,16 +1,23 @@
 variable "do_token" {}
+variable "domain" {}
+variable "ipfs_nodes_count" {
+  default = 1
+}
+variable "ssh_public_key_path" {
+  default = "~/.ssh/id_rsa.pub"
+}
+
+resource "digitalocean_ssh_key" "default" {
+  name       = "IPFS Terraform Key"
+  public_key = "${file("${var.ssh_public_key_path}")}"
+}
 
 provider "digitalocean" {
   token = "${var.do_token}"
 }
 
 resource "digitalocean_domain" "default" {
-  name       = "dweb.cat"
-  ip_address = "${digitalocean_droplet.front.0.ipv4_address}"
-}
-
-resource "digitalocean_domain" "backup" {
-  name       = "catalunya.network"
+  name       = "${var.domain}"
   ip_address = "${digitalocean_droplet.front.0.ipv4_address}"
 }
 
@@ -21,41 +28,11 @@ resource "digitalocean_record" "default" {
   value  = "${digitalocean_droplet.front.0.ipv4_address}"
 }
 
-resource "digitalocean_record" "backup" {
-  domain = "${digitalocean_domain.backup.name}"
-  name   = "@"
-  type   = "A"
-  value  = "${digitalocean_droplet.front.0.ipv4_address}"
-}
-
 resource "digitalocean_record" "gateway" {
   domain = "${digitalocean_domain.default.name}"
   name   = "gateway"
   type   = "A"
   value  = "${digitalocean_droplet.front.0.ipv4_address}"
-}
-
-resource "digitalocean_record" "email-spool" {
-  domain = "${digitalocean_domain.default.name}"
-  type   = "MX"
-  name   = "email-spool"
-	priority = 10
-  value  = "spool.mail.gandi.net."
-}
-
-resource "digitalocean_record" "email-fb" {
-  domain = "${digitalocean_domain.default.name}"
-  type   = "MX"
-  name   = "email-fb"
-	priority = 50
-  value  = "fb.mail.gandi.net."
-}
-
-resource "digitalocean_record" "email-txt" {
-  domain = "${digitalocean_domain.default.name}"
-  type   = "TXT"
-  name   = "email-txt"
-  value  = "v=spf1 include:_mailcust.gandi.net ?all"
 }
 
 data "template_file" "caddyfile" {
@@ -71,9 +48,9 @@ resource "digitalocean_droplet" "front" {
   name   = "front-${count.index}"
   region = "fra1"
   size   = "512mb"
-  count  = 1
+  count  = "${var.ipfs_nodes_count}"
 
-  ssh_keys           = ["6351718", "6161470"]
+  ssh_keys           = ["${digitalocean_ssh_key.default.fingerprint}"]
   private_networking = true
 
   provisioner "file" {
@@ -99,9 +76,9 @@ resource "digitalocean_droplet" "ipfs" {
   name               = "ipfs-${count.index}"
   region             = "fra1"
   size               = "2gb"
-  ssh_keys           = ["6351718", "6161470"]
+  ssh_keys           = ["${digitalocean_ssh_key.default.fingerprint}"]
   private_networking = true
-  count              = 2
+  count              = 1
 
   provisioner "file" {
     source      = "ipfs.service"

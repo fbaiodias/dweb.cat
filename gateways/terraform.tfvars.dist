@@ -1,3 +1,6 @@
 # Copy this file to `terraform.tfvars` (without `.dist` in the end)
-# Next, replace empty string with DigitalOcean API Token
-do_token = ""
+
+do_token = "" # Generate it at https://cloud.digitalocean.com/settings/api/tokens
+domain = "" # Make sure it's already poiting to DigitalOcean: https://www.digitalocean.com/community/tutorials/how-to-set-up-a-host-name-with-digitalocean#step-two—change-your-domain-server
+ipfs_nodes_count = 1 # Change this if you want to run more than 1 IPFS node
+ssh_public_key_path = "~/.ssh/id_rsa.pub" # Make sure it's NOT yet being used on DigitalOcean: https://cloud.digitalocean.com/settings/security
